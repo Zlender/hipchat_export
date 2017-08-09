@@ -113,7 +113,7 @@ def get_user_list(user_token):
     user_list = {}
 
     # Fetch the user list from the API
-    url = HIPCHAT_API_URL + "/user"
+    url = HIPCHAT_API_URL + "/user?max-results=1000"
     r = requests.get(url, headers=headers)
     TOTAL_REQUESTS += 1
 
@@ -147,6 +147,8 @@ def message_export(user_token, user_id, user_name):
     dir_name =  os.path.join(EXPORT_DIR, user_name)
     if not os.path.isdir(dir_name):
         os.makedirs(dir_name)
+    else:
+        return
     dir_name = os.path.join(FILE_DIR, user_id)
     if not os.path.isdir(dir_name):
         os.makedirs(dir_name)
@@ -165,7 +167,7 @@ def message_export(user_token, user_id, user_name):
 
     # Set initial URL with correct user_id
     global HIPCHAT_API_URL
-    url = HIPCHAT_API_URL + "/user/%s/history?date=%s&reverse=false" % (user_id, int(time()))
+    url = HIPCHAT_API_URL + "/user/%s/history?date=%s&reverse=false" % (user_id, int(time())-100)
 
     # main loop to fetch and save messages
     while MORE_RECORDS:
@@ -250,7 +252,7 @@ def main(argv=None):
     global VERBOSE
     ACTION = "PROCESS"
     USER_TOKEN = None
-    IDS_TO_EXTRACT = None
+    IDS_TO_EXTRACT = {}
     USER_LIST = {}
     USER_SUBSET = {}
 
@@ -283,7 +285,7 @@ def main(argv=None):
                 IDS_TO_EXTRACT = value.split(',')
 
         # ensure that the token passed is a valid token length (real check happens later)
-        if not USER_TOKEN or not len(USER_TOKEN) == 40:
+        if not USER_TOKEN or not len(USER_TOKEN) >= 40:
             raise Usage("You must specify a valid HipChat user token!")
 
         # Get the list of users
@@ -294,7 +296,7 @@ def main(argv=None):
             return
 
         # Validate user IDs and ensure they are present in the user list
-        if IDS_TO_EXTRACT is not None:
+        if not IDS_TO_EXTRACT:
             for user_id in IDS_TO_EXTRACT:
                 try:
                     int(user_id)
@@ -315,7 +317,7 @@ def main(argv=None):
             sys.exit(0)
 
         # Iterate through user list and export all 1-to-1 messages to disk
-        if USER_SUBSET is not None:
+        if USER_SUBSET:
             extract = USER_SUBSET.items()
         else:
             extract = USER_LIST.items()
